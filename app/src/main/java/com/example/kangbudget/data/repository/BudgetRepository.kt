@@ -8,6 +8,7 @@ import com.example.kangbudget.data.model.Transaction
 import com.google.firebase.Timestamp
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
+import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -57,13 +58,14 @@ class BudgetRepository(
 
     fun observeCategories(monthId: String): Flow<List<Category>> = callbackFlow {
         val registration = categoriesRef(monthId)
-            .whereEqualTo("isArchived", false)
+            .whereEqualTo("archived", false)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
                     return@addSnapshotListener
                 }
                 val categories = snapshot?.toObjects(Category::class.java).orEmpty()
+                    .sortedBy { it.createdAt }
                 categories.forEach {
                     categoryTypeCache["$monthId/${it.id}"] = it.type
                     categoryNameCache["$monthId/${it.id}"] = it.name
@@ -123,6 +125,13 @@ class BudgetRepository(
         budgetDoc(budget.id).set(budget).await()
     }
 
+    suspend fun updateInitialBalance(monthId: String, initialBalance: Double) {
+        budgetDoc(monthId).set(
+            mapOf("initialBalance" to initialBalance),
+            SetOptions.merge()
+        ).await()
+    }
+
     suspend fun addCategory(monthId: String, category: Category) {
         val docRef = categoryDoc(monthId, category.id.ifBlank { categoriesRef(monthId).document().id })
         val webhookIdentifier = if (category.budgetType == BudgetType.EXCEL) {
@@ -130,7 +139,12 @@ class BudgetRepository(
         } else {
             ""
         }
-        val toSave = category.copy(id = docRef.id, webhookIdentifier = webhookIdentifier)
+        val toSave = category.copy(
+            id = docRef.id,
+            monthId = monthId,
+            webhookIdentifier = webhookIdentifier,
+            createdAt = Timestamp.now()
+        )
         docRef.set(toSave).await()
     }
 
@@ -144,7 +158,7 @@ class BudgetRepository(
     }
 
     suspend fun archiveCategory(monthId: String, categoryId: String) {
-        categoryDoc(monthId, categoryId).update("isArchived", true).await()
+        categoryDoc(monthId, categoryId).update("archived", true).await()
     }
 
     suspend fun addTransaction(monthId: String, category: Category, transaction: Transaction) {
@@ -172,7 +186,7 @@ class BudgetRepository(
         newInitialBalance: Double
     ) {
         val activeCategories = categoriesRef(sourceMonthId)
-            .whereEqualTo("isArchived", false)
+            .whereEqualTo("archived", false)
             .get()
             .await()
             .toObjects(Category::class.java)
@@ -191,7 +205,7 @@ class BudgetRepository(
             val targetDoc = categoryDoc(targetMonthId, source.id)
             batch.set(
                 targetDoc,
-                source.copy(isArchived = false)
+                source.copy(archived = false, monthId = targetMonthId, createdAt = Timestamp.now())
             )
         }
         batch.commit().await()

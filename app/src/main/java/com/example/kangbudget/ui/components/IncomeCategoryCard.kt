@@ -96,7 +96,7 @@ fun IncomeCategoryCard(
 }
 
 private fun incomeSubtitle(category: Category): String = when (category.incomeType) {
-    IncomeType.FIXED -> "Fixed · monthly"
+    IncomeType.FIXED -> "Fixed · ${formatAmount(category.targetGoal)} monthly"
     IncomeType.OPEN -> "Open · add as it comes"
     IncomeType.GOAL -> "Goal · ${formatAmount(category.targetGoal)}"
     else -> ""

@@ -15,12 +15,12 @@ import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.ui.components.SettingsSheet
@@ -35,16 +35,16 @@ fun MainScreen(
     budgetViewModel: BudgetViewModel = viewModel(),
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
-    val monthId by budgetViewModel.monthId.collectAsState()
-    val budget by budgetViewModel.budget.collectAsState()
-    val insights by budgetViewModel.insights.collectAsState()
-    val transactionsByCategory by budgetViewModel.transactionsByCategory.collectAsState()
-    val selectedTab by budgetViewModel.selectedTab.collectAsState()
-    val selectedCategoryId by budgetViewModel.selectedCategoryId.collectAsState()
-    val categories by budgetViewModel.categories.collectAsState()
+    val monthId by budgetViewModel.monthId.collectAsStateWithLifecycle()
+    val budget by budgetViewModel.budget.collectAsStateWithLifecycle()
+    val insights by budgetViewModel.insights.collectAsStateWithLifecycle()
+    val transactionsByCategory by budgetViewModel.transactionsByCategory.collectAsStateWithLifecycle()
+    val selectedTab by budgetViewModel.selectedTab.collectAsStateWithLifecycle()
+    val selectedCategoryId by budgetViewModel.selectedCategoryId.collectAsStateWithLifecycle()
+    val categories by budgetViewModel.categories.collectAsStateWithLifecycle()
 
-    val activityLog by settingsViewModel.activityLog.collectAsState()
-    val allBudgets by settingsViewModel.allBudgets.collectAsState()
+    val activityLog by settingsViewModel.activityLog.collectAsStateWithLifecycle()
+    val allBudgets by settingsViewModel.allBudgets.collectAsStateWithLifecycle()
 
     var showSettings by remember { mutableStateOf(false) }
 
@@ -85,7 +85,8 @@ fun MainScreen(
                     onQuickAddTransaction = { category, amount, description ->
                         budgetViewModel.addTransaction(category, amount, description)
                     },
-                    onCreateCategory = { category -> budgetViewModel.addCategory(category) }
+                    onCreateCategory = { category -> budgetViewModel.addCategory(category) },
+                    onEditInitialBalance = { newBalance -> budgetViewModel.editInitialBalance(newBalance) }
                 )
                 HomeTab.INSIGHTS -> InsightsScreen(monthId = monthId, insights = insights)
             }

@@ -33,7 +33,7 @@ fun AddCategoryDialog(
     var incomeType by remember { mutableStateOf(IncomeType.FIXED) }
     var budgetType by remember { mutableStateOf(BudgetType.NORMAL) }
 
-    val showGoalField = categoryType == CategoryType.EXPENSE || incomeType == IncomeType.GOAL
+    val showGoalField = categoryType == CategoryType.EXPENSE || incomeType == IncomeType.GOAL || incomeType == IncomeType.FIXED
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -59,7 +59,15 @@ fun AddCategoryDialog(
                     OutlinedTextField(
                         value = targetGoalText,
                         onValueChange = { targetGoalText = it },
-                        label = { Text(if (categoryType == CategoryType.EXPENSE) "Budget target" else "Goal") }
+                        label = {
+                            Text(
+                                when {
+                                    categoryType == CategoryType.EXPENSE -> "Budget target"
+                                    incomeType == IncomeType.FIXED -> "Fixed amount"
+                                    else -> "Goal"
+                                }
+                            )
+                        }
                     )
                 }
                 Spacer(modifier = Modifier.height(8.dp))
@@ -85,7 +93,7 @@ fun AddCategoryDialog(
                                 type = categoryType,
                                 incomeType = if (categoryType == CategoryType.INCOME) incomeType else IncomeType.FIXED,
                                 targetGoal = targetGoalText.toDoubleOrNull() ?: 0.0,
-                                isArchived = false,
+                                archived = false,
                                 budgetType = budgetType
                             )
                         )

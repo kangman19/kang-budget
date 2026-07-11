@@ -6,9 +6,10 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
-import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -28,6 +29,7 @@ import com.example.kangbudget.data.model.Budget
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.CategoryType
 import com.example.kangbudget.ui.components.AddCategoryDialog
+import com.example.kangbudget.ui.components.EditInitialBalanceDialog
 import com.example.kangbudget.ui.components.ExpenseCategoryCard
 import com.example.kangbudget.ui.components.IncomeCategoryCard
 import com.example.kangbudget.ui.components.StatTile
@@ -48,12 +50,18 @@ fun HomeScreen(
     onDeleteCategory: (Category) -> Unit,
     onQuickAddTransaction: (Category, Double, String) -> Unit,
     onCreateCategory: (Category) -> Unit,
+    onEditInitialBalance: (Double) -> Unit,
     modifier: Modifier = Modifier
 ) {
     var addDialogType by remember { mutableStateOf<String?>(null) }
+    var showEditBalanceDialog by remember { mutableStateOf(false) }
 
     Column(modifier = modifier.padding(16.dp)) {
-        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surfaceVariant) {
+        Surface(
+            shape = RoundedCornerShape(16.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            onClick = { showEditBalanceDialog = true }
+        ) {
             Text(
                 text = "Balance from ${monthIdToDisplayName(monthId)}   KES ${formatAmount(budget?.initialBalance ?: 0.0)}",
                 modifier = Modifier.padding(16.dp),
@@ -93,27 +101,37 @@ fun HomeScreen(
         }
 
         SectionHeader(title = "Income", onAddCategory = { addDialogType = CategoryType.INCOME })
-        insights.incomeBreakdown.forEach { earning ->
-            IncomeCategoryCard(
-                earning = earning,
-                onClick = { onOpenCategory(earning.category) },
-                onEditConfirmed = { name, goal -> onEditCategory(earning.category, name, goal) },
-                onDeleteConfirmed = { onDeleteCategory(earning.category) },
-                onQuickAdd = { amount, description -> onQuickAddTransaction(earning.category, amount, description) }
-            )
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(insights.incomeBreakdown, key = { it.category.id }) { earning ->
+                IncomeCategoryCard(
+                    earning = earning,
+                    onClick = { onOpenCategory(earning.category) },
+                    onEditConfirmed = { name, goal -> onEditCategory(earning.category, name, goal) },
+                    onDeleteConfirmed = { onDeleteCategory(earning.category) },
+                    onQuickAdd = { amount, description -> onQuickAddTransaction(earning.category, amount, description) }
+                )
+            }
         }
 
         HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
 
         SectionHeader(title = "Expenses", onAddCategory = { addDialogType = CategoryType.EXPENSE })
-        insights.expenseBreakdown.forEach { spend ->
-            ExpenseCategoryCard(
-                spend = spend,
-                onClick = { onOpenCategory(spend.category) },
-                onEditConfirmed = { name, goal -> onEditCategory(spend.category, name, goal) },
-                onDeleteConfirmed = { onDeleteCategory(spend.category) },
-                onQuickAdd = { amount, description -> onQuickAddTransaction(spend.category, amount, description) }
-            )
+        LazyColumn(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            items(insights.expenseBreakdown, key = { it.category.id }) { spend ->
+                ExpenseCategoryCard(
+                    spend = spend,
+                    onClick = { onOpenCategory(spend.category) },
+                    onEditConfirmed = { name, goal -> onEditCategory(spend.category, name, goal) },
+                    onDeleteConfirmed = { onDeleteCategory(spend.category) },
+                    onQuickAdd = { amount, description -> onQuickAddTransaction(spend.category, amount, description) }
+                )
+            }
         }
     }
 
@@ -124,6 +142,17 @@ fun HomeScreen(
             onConfirm = { category ->
                 onCreateCategory(category)
                 addDialogType = null
+            }
+        )
+    }
+
+    if (showEditBalanceDialog) {
+        EditInitialBalanceDialog(
+            currentBalance = budget?.initialBalance ?: 0.0,
+            onDismiss = { showEditBalanceDialog = false },
+            onConfirm = { newBalance ->
+                onEditInitialBalance(newBalance)
+                showEditBalanceDialog = false
             }
         )
     }

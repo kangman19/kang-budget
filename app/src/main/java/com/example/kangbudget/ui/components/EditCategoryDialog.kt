@@ -27,7 +27,9 @@ fun EditCategoryDialog(
     var name by remember { mutableStateOf(category.name) }
     var targetGoalText by remember { mutableStateOf(if (category.targetGoal > 0) category.targetGoal.toString() else "") }
 
-    val showGoalField = category.type == CategoryType.EXPENSE || category.incomeType == IncomeType.GOAL
+    val showGoalField = category.type == CategoryType.EXPENSE ||
+        category.incomeType == IncomeType.GOAL ||
+        category.incomeType == IncomeType.FIXED
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -40,7 +42,15 @@ fun EditCategoryDialog(
                     OutlinedTextField(
                         value = targetGoalText,
                         onValueChange = { targetGoalText = it },
-                        label = { Text(if (category.type == CategoryType.EXPENSE) "Budget target" else "Goal") }
+                        label = {
+                            Text(
+                                when {
+                                    category.type == CategoryType.EXPENSE -> "Budget target"
+                                    category.incomeType == IncomeType.FIXED -> "Fixed amount"
+                                    else -> "Goal"
+                                }
+                            )
+                        }
                     )
                 }
             }

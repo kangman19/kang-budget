@@ -1,5 +1,7 @@
 package com.example.kangbudget.data.model
 
+import com.google.firebase.Timestamp
+
 object CategoryType {
     const val INCOME = "income"
     const val EXPENSE = "expense"
@@ -18,13 +20,15 @@ object BudgetType {
 
 data class Category(
     val id: String = "",
+    val monthId: String = "",
     val name: String = "",
     val type: String = CategoryType.EXPENSE,
     val incomeType: String = IncomeType.FIXED,
     val targetGoal: Double = 0.0,
-    val isArchived: Boolean = false,
+    val archived: Boolean = false,
     val budgetType: String = BudgetType.NORMAL,
-    val webhookIdentifier: String = ""
+    val webhookIdentifier: String = "",
+    val createdAt: Timestamp = Timestamp.now()
 ) {
     companion object {
         fun deriveWebhookIdentifier(categoryName: String): String =

@@ -3,6 +3,7 @@ package com.example.kangbudget.util
 import com.example.kangbudget.data.model.Budget
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.CategoryType
+import com.example.kangbudget.data.model.IncomeType
 import com.example.kangbudget.data.model.Transaction
 
 data class CategorySpend(val category: Category, val spent: Double) {
@@ -41,7 +42,14 @@ fun calculateInsights(
 
     val incomeBreakdown = categories
         .filter { it.type == CategoryType.INCOME }
-        .map { category -> CategoryEarning(category, transactionsByCategory[category.id].orEmpty().sumOf { it.amount }) }
+        .map { category ->
+            val earned = if (category.incomeType == IncomeType.FIXED) {
+                category.targetGoal
+            } else {
+                transactionsByCategory[category.id].orEmpty().sumOf { it.amount }
+            }
+            CategoryEarning(category, earned)
+        }
 
     val totalExpenditure = expenseBreakdown.sumOf { it.spent }
     val totalIncome = incomeBreakdown.sumOf { it.earned }

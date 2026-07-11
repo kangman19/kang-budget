@@ -83,6 +83,12 @@ class BudgetViewModel : ViewModel() {
         _selectedCategoryId.value = null
     }
 
+    fun editInitialBalance(newInitialBalance: Double) {
+        viewModelScope.launch {
+            repository.updateInitialBalance(monthId.value, newInitialBalance)
+        }
+    }
+
     fun addCategory(category: Category) {
         viewModelScope.launch {
             repository.addCategory(monthId.value, category)
