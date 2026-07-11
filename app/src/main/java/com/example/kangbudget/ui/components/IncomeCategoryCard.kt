@@ -63,7 +63,7 @@ fun IncomeCategoryCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = formatAmount(earning.earned),
-                        color = if (category.incomeType == IncomeType.OPEN) OPEN_INCOME_COLOR else MaterialTheme.colorScheme.onSurface,
+                        color = OPEN_INCOME_COLOR,
                         style = MaterialTheme.typography.bodyLarge
                     )
                     if (allowQuickAdd) {
