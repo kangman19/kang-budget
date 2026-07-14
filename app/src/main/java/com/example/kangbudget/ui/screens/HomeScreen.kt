@@ -82,9 +82,10 @@ fun HomeScreen(
         { StatTile("Saved", formatAmount(insights.remainingToSpend.coerceAtLeast(0.0)), Modifier.aspectRatio(1.3f), valueColor = INCOME_GREEN) },
         {
             StatTile(
-                "Upcoming bills",
-                "${insights.expenseBreakdown.count { it.spent == 0.0 }} bills",
-                Modifier.aspectRatio(1.3f)
+                "Provisional balance",
+                formatAmount(insights.provisionalBalance),
+                Modifier.aspectRatio(1.3f),
+                valueColor = if (insights.provisionalBalance >= 0) INCOME_GREEN else EXPENSE_RED
             )
         }
     )

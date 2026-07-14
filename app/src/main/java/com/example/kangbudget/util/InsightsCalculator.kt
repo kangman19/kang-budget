@@ -64,7 +64,7 @@ fun calculateInsights(
         incomeSpentPercent = if (totalIncome > 0) (totalExpenditure / totalIncome) * 100 else 0.0,
         remainingToSpend = totalBudgeted - totalExpenditure,
         netCash = initialBalance + totalIncome,
-        provisionalBalance = totalIncome - totalBudgeted,
+        provisionalBalance = totalIncome - totalExpenditure,
         daysLeft = daysRemaining(monthId),
         dailyAverageSpend = totalExpenditure / elapsedDays,
         topSpendingCategory = expenseBreakdown.filter { it.spent > 0 }.maxByOrNull { it.spent },

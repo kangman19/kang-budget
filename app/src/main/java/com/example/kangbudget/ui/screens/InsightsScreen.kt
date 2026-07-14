@@ -60,7 +60,14 @@ fun InsightsScreen(
             item { StatTile("Remaining to spend", formatAmount(insights.remainingToSpend), Modifier.aspectRatio(1.3f)) }
             item { StatTile("Net cash", formatAmount(insights.netCash), Modifier.aspectRatio(1.3f)) }
             item { StatTile("Total budgeted", formatAmount(insights.totalBudgeted), Modifier.aspectRatio(1.3f)) }
-            item { StatTile("Provisional balance", formatAmount(insights.provisionalBalance), Modifier.aspectRatio(1.3f)) }
+            item {
+                StatTile(
+                    "Provisional balance",
+                    formatAmount(insights.provisionalBalance),
+                    Modifier.aspectRatio(1.3f),
+                    valueColor = if (insights.provisionalBalance >= 0) INCOME_GREEN else EXPENSE_RED
+                )
+            }
             item { StatTile("Total expenditure", formatAmount(insights.totalExpenditure), Modifier.aspectRatio(1.3f), valueColor = EXPENSE_RED) }
             item { StatTile("Days left", insights.daysLeft.toString(), Modifier.aspectRatio(1.3f)) }
             item {
