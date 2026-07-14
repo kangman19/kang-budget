@@ -41,6 +41,7 @@ import com.example.kangbudget.ui.util.formatPercent
 import com.example.kangbudget.ui.util.privacyBlur
 import com.example.kangbudget.util.InsightsData
 import com.example.kangbudget.util.monthIdToDisplayName
+import java.time.LocalDateTime
 
 private val EXPENSE_RED = Color(0xFFE74C3C)
 private val INCOME_GREEN = OPEN_INCOME_COLOR
@@ -53,7 +54,7 @@ fun HomeScreen(
     onOpenCategory: (Category) -> Unit,
     onEditCategory: (Category, String, Double) -> Unit,
     onDeleteCategory: (Category) -> Unit,
-    onQuickAddTransaction: (Category, Double, String) -> Unit,
+    onQuickAddTransaction: (Category, Double, String, LocalDateTime) -> Unit,
     onCreateCategory: (Category) -> Unit,
     onEditInitialBalance: (Double) -> Unit,
     modifier: Modifier = Modifier
@@ -138,7 +139,7 @@ fun HomeScreen(
                 onClick = { onOpenCategory(earning.category) },
                 onEditConfirmed = { name, goal -> onEditCategory(earning.category, name, goal) },
                 onDeleteConfirmed = { onDeleteCategory(earning.category) },
-                onQuickAdd = { amount, description -> onQuickAddTransaction(earning.category, amount, description) }
+                onQuickAdd = { amount, description, dateTime -> onQuickAddTransaction(earning.category, amount, description, dateTime) }
             )
         }
 
@@ -157,7 +158,7 @@ fun HomeScreen(
                 onClick = { onOpenCategory(spend.category) },
                 onEditConfirmed = { name, goal -> onEditCategory(spend.category, name, goal) },
                 onDeleteConfirmed = { onDeleteCategory(spend.category) },
-                onQuickAdd = { amount, description -> onQuickAddTransaction(spend.category, amount, description) }
+                onQuickAdd = { amount, description, dateTime -> onQuickAddTransaction(spend.category, amount, description, dateTime) }
             )
         }
 

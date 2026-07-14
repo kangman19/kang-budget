@@ -94,8 +94,8 @@ fun MainScreen(
                         onOpenCategory = { category -> budgetViewModel.openCategoryDetail(category.id) },
                         onEditCategory = { category, name, goal -> budgetViewModel.editCategory(category, name, goal) },
                         onDeleteCategory = { category -> budgetViewModel.deleteCategory(category) },
-                        onQuickAddTransaction = { category, amount, description ->
-                            budgetViewModel.addTransaction(category, amount, description)
+                        onQuickAddTransaction = { category, amount, description, dateTime ->
+                            budgetViewModel.addTransaction(category, amount, description, dateTime)
                         },
                         onCreateCategory = { category -> budgetViewModel.addCategory(category) },
                         onEditInitialBalance = { newBalance -> budgetViewModel.editInitialBalance(newBalance) }

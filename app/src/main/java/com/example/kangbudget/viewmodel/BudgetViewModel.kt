@@ -21,7 +21,9 @@ import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import java.util.Date
 
 enum class HomeTab { HOME, INSIGHTS }
 
@@ -107,18 +109,18 @@ class BudgetViewModel : ViewModel() {
         }
     }
 
-    fun addTransaction(category: Category, amount: Double, description: String) {
+    fun addTransaction(category: Category, amount: Double, description: String, dateTime: LocalDateTime) {
         viewModelScope.launch {
-            val now = LocalDateTime.now()
+            val instant = dateTime.atZone(ZoneId.systemDefault()).toInstant()
             repository.addTransaction(
                 monthId.value,
                 category,
                 Transaction(
                     amount = amount,
                     description = description,
-                    date = now.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
-                    time = now.format(DateTimeFormatter.ofPattern("HH:mm")),
-                    timestamp = Timestamp.now()
+                    date = dateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd")),
+                    time = dateTime.format(DateTimeFormatter.ofPattern("HH:mm")),
+                    timestamp = Timestamp(Date.from(instant))
                 )
             )
         }

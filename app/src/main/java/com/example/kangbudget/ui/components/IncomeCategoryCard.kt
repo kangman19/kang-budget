@@ -22,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import java.time.LocalDateTime
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.IncomeType
 import com.example.kangbudget.ui.util.OPEN_INCOME_COLOR
@@ -36,7 +37,7 @@ fun IncomeCategoryCard(
     onClick: () -> Unit,
     onEditConfirmed: (name: String, targetGoal: Double) -> Unit,
     onDeleteConfirmed: () -> Unit,
-    onQuickAdd: (amount: Double, description: String) -> Unit
+    onQuickAdd: (amount: Double, description: String, dateTime: LocalDateTime) -> Unit
 ) {
     val category: Category = earning.category
     var showQuickAdd by remember { mutableStateOf(false) }
@@ -96,8 +97,8 @@ fun IncomeCategoryCard(
         QuickAddTransactionDialog(
             categoryName = category.name,
             onDismiss = { showQuickAdd = false },
-            onConfirm = { amount, description ->
-                onQuickAdd(amount, description)
+            onConfirm = { amount, description, dateTime ->
+                onQuickAdd(amount, description, dateTime)
                 showQuickAdd = false
             }
         )
