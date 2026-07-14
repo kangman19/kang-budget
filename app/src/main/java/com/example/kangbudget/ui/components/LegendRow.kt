@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.example.kangbudget.ui.util.formatAmount
 import com.example.kangbudget.ui.util.formatPercent
+import com.example.kangbudget.ui.util.privacyBlur
 
 @Composable
 fun LegendRow(
@@ -38,6 +39,7 @@ fun LegendRow(
         }
         Text(
             text = "${formatPercent(percent)} · ${formatAmount(amount)}",
+            modifier = Modifier.privacyBlur(radius = 6.dp),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )

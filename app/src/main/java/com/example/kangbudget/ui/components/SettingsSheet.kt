@@ -31,6 +31,7 @@ import com.example.kangbudget.data.model.ActivityLogEntry
 import com.example.kangbudget.data.model.Budget
 import com.example.kangbudget.data.model.CategoryType
 import com.example.kangbudget.ui.util.formatAmount
+import com.example.kangbudget.ui.util.privacyBlur
 import com.example.kangbudget.util.monthIdToDisplayName
 
 private val INCOME_GREEN = Color(0xFF2ECC71)
@@ -107,7 +108,12 @@ private fun ActivityLogRow(entry: ActivityLogEntry) {
                 Text(entry.description, style = MaterialTheme.typography.labelSmall)
             }
         }
-        Text(formatAmount(entry.amount), color = color, style = MaterialTheme.typography.bodyMedium)
+        Text(
+            formatAmount(entry.amount),
+            modifier = Modifier.privacyBlur(),
+            color = color,
+            style = MaterialTheme.typography.bodyMedium
+        )
     }
 }
 

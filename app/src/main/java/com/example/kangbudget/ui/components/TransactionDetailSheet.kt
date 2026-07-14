@@ -27,6 +27,7 @@ import androidx.compose.ui.unit.dp
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.Transaction
 import com.example.kangbudget.ui.util.formatAmount
+import com.example.kangbudget.ui.util.privacyBlur
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,7 +94,11 @@ private fun TransactionRow(
             )
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(text = formatAmount(transaction.amount), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                text = formatAmount(transaction.amount),
+                modifier = Modifier.privacyBlur(),
+                style = MaterialTheme.typography.bodyMedium
+            )
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit transaction") }
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete transaction") }
         }

@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import com.example.kangbudget.ui.util.privacyBlur
 
 data class DonutSlice(val label: String, val value: Double, val color: Color)
 
@@ -52,7 +53,12 @@ fun DonutChart(
         }
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(text = centerLabel, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center)
-            Text(text = centerValue, style = MaterialTheme.typography.titleMedium, textAlign = TextAlign.Center)
+            Text(
+                text = centerValue,
+                modifier = Modifier.privacyBlur(),
+                style = MaterialTheme.typography.titleMedium,
+                textAlign = TextAlign.Center
+            )
         }
     }
 }

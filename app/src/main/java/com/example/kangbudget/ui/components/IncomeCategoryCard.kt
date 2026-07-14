@@ -20,12 +20,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.IncomeType
 import com.example.kangbudget.ui.util.OPEN_INCOME_COLOR
 import com.example.kangbudget.ui.util.formatAmount
 import com.example.kangbudget.ui.util.incomeGoalProgressColor
+import com.example.kangbudget.ui.util.privacyBlur
 import com.example.kangbudget.util.CategoryEarning
 
 @Composable
@@ -52,10 +54,16 @@ fun IncomeCategoryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column {
-                    Text(text = category.name, style = MaterialTheme.typography.titleMedium)
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
+                    Text(
+                        text = category.name,
+                        style = MaterialTheme.typography.titleMedium,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
                     Text(
                         text = incomeSubtitle(category),
+                        modifier = if (category.incomeType != IncomeType.OPEN) Modifier.privacyBlur(radius = 6.dp) else Modifier,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -63,6 +71,7 @@ fun IncomeCategoryCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = formatAmount(earning.earned),
+                        modifier = Modifier.privacyBlur(),
                         color = OPEN_INCOME_COLOR,
                         style = MaterialTheme.typography.bodyLarge
                     )

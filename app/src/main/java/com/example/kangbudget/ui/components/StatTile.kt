@@ -10,13 +10,15 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.kangbudget.ui.util.privacyBlur
 
 @Composable
 fun StatTile(
     label: String,
     value: String,
     modifier: Modifier = Modifier,
-    valueColor: Color = Color.Unspecified
+    valueColor: Color = Color.Unspecified,
+    blurValue: Boolean = true
 ) {
     Surface(
         modifier = modifier,
@@ -27,6 +29,7 @@ fun StatTile(
             Text(text = label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(
                 text = value,
+                modifier = if (blurValue) Modifier.privacyBlur() else Modifier,
                 style = MaterialTheme.typography.titleMedium,
                 color = if (valueColor == Color.Unspecified) MaterialTheme.colorScheme.onSurface else valueColor
             )

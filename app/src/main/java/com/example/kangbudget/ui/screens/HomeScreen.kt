@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -34,8 +35,10 @@ import com.example.kangbudget.ui.components.ExpenseCategoryCard
 import com.example.kangbudget.ui.components.IncomeCategoryCard
 import com.example.kangbudget.ui.components.StatTile
 import com.example.kangbudget.ui.util.OPEN_INCOME_COLOR
+import com.example.kangbudget.ui.util.expenseProgressColor
 import com.example.kangbudget.ui.util.formatAmount
 import com.example.kangbudget.ui.util.formatPercent
+import com.example.kangbudget.ui.util.privacyBlur
 import com.example.kangbudget.util.InsightsData
 import com.example.kangbudget.util.monthIdToDisplayName
 
@@ -58,21 +61,24 @@ fun HomeScreen(
     var addDialogType by remember { mutableStateOf<String?>(null) }
     var showEditBalanceDialog by remember { mutableStateOf(false) }
 
+    val budgetUsedPercent = if (insights.totalBudgeted > 0) insights.totalExpenditure / insights.totalBudgeted * 100 else 0.0
+
     val statTiles = listOf<@Composable () -> Unit>(
-        { StatTile("Left to spend", formatAmount(insights.remainingToSpend), Modifier.aspectRatio(1.3f)) },
+        { StatTile("Left to spend", formatAmount(insights.remainingToSpend), Modifier.aspectRatio(1.3f), valueColor = EXPENSE_RED) },
         { StatTile("Total spent", formatAmount(insights.totalExpenditure), Modifier.aspectRatio(1.3f), valueColor = EXPENSE_RED) },
         { StatTile("Total income", formatAmount(insights.totalIncome), Modifier.aspectRatio(1.3f), valueColor = INCOME_GREEN) },
         {
             StatTile(
                 "Budget used",
-                formatPercent(if (insights.totalBudgeted > 0) insights.totalExpenditure / insights.totalBudgeted * 100 else 0.0),
-                Modifier.aspectRatio(1.3f)
+                formatPercent(budgetUsedPercent),
+                Modifier.aspectRatio(1.3f),
+                valueColor = expenseProgressColor(budgetUsedPercent)
             )
         },
         { StatTile("Days left", insights.daysLeft.toString(), Modifier.aspectRatio(1.3f)) },
         { StatTile("Daily avg", formatAmount(insights.dailyAverageSpend), Modifier.aspectRatio(1.3f)) },
-        { StatTile("Top category", insights.topSpendingCategory?.category?.name ?: "—", Modifier.aspectRatio(1.3f)) },
-        { StatTile("Saved", formatAmount(insights.remainingToSpend.coerceAtLeast(0.0)), Modifier.aspectRatio(1.3f)) },
+        { StatTile("Top category", insights.topSpendingCategory?.category?.name ?: "—", Modifier.aspectRatio(1.3f), blurValue = false) },
+        { StatTile("Saved", formatAmount(insights.remainingToSpend.coerceAtLeast(0.0)), Modifier.aspectRatio(1.3f), valueColor = INCOME_GREEN) },
         {
             StatTile(
                 "Upcoming bills",
@@ -93,11 +99,17 @@ fun HomeScreen(
                 color = MaterialTheme.colorScheme.surfaceVariant,
                 onClick = { showEditBalanceDialog = true }
             ) {
-                Text(
-                    text = "Balance from ${monthIdToDisplayName(monthId)}   KES ${formatAmount(budget?.initialBalance ?: 0.0)}",
-                    modifier = Modifier.padding(16.dp),
-                    style = MaterialTheme.typography.titleMedium
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Balance from ${monthIdToDisplayName(monthId)}   KES ",
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    Text(
+                        text = formatAmount(budget?.initialBalance ?: 0.0),
+                        modifier = Modifier.privacyBlur(),
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                }
             }
         }
 
@@ -113,7 +125,12 @@ fun HomeScreen(
         }
 
         item {
-            SectionHeader(title = "Income", onAddCategory = { addDialogType = CategoryType.INCOME })
+            SectionHeader(
+                title = "Income",
+                total = formatAmount(insights.totalIncome),
+                totalColor = INCOME_GREEN,
+                onAddCategory = { addDialogType = CategoryType.INCOME }
+            )
         }
         items(insights.incomeBreakdown, key = { it.category.id }) { earning ->
             IncomeCategoryCard(
@@ -127,7 +144,12 @@ fun HomeScreen(
 
         item {
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
-            SectionHeader(title = "Expenses", onAddCategory = { addDialogType = CategoryType.EXPENSE })
+            SectionHeader(
+                title = "Expenses",
+                total = formatAmount(insights.totalExpenditure),
+                totalColor = EXPENSE_RED,
+                onAddCategory = { addDialogType = CategoryType.EXPENSE }
+            )
         }
         items(insights.expenseBreakdown, key = { it.category.id }) { spend ->
             ExpenseCategoryCard(
@@ -166,13 +188,27 @@ fun HomeScreen(
 }
 
 @Composable
-private fun SectionHeader(title: String, onAddCategory: () -> Unit) {
+private fun SectionHeader(
+    title: String,
+    total: String,
+    totalColor: Color,
+    onAddCategory: () -> Unit
+) {
     Row(
         modifier = Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(text = title, style = MaterialTheme.typography.titleMedium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(text = title, style = MaterialTheme.typography.titleMedium)
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = total,
+                modifier = Modifier.privacyBlur(),
+                color = totalColor,
+                style = MaterialTheme.typography.titleMedium
+            )
+        }
         TextButton(onClick = onAddCategory) { Text("+ Add category") }
     }
 }

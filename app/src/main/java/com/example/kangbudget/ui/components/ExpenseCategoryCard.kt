@@ -21,10 +21,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.ui.util.expenseProgressColor
 import com.example.kangbudget.ui.util.formatAmount
+import com.example.kangbudget.ui.util.privacyBlur
 import com.example.kangbudget.util.CategorySpend
 
 @Composable
@@ -52,10 +54,17 @@ fun ExpenseCategoryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Text(text = category.name, style = MaterialTheme.typography.titleMedium)
+                Text(
+                    text = category.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = "${formatAmount(spend.spent)} / ${formatAmount(category.targetGoal)}",
+                        modifier = Modifier.privacyBlur(),
                         color = barColor,
                         style = MaterialTheme.typography.bodyMedium
                     )
@@ -73,6 +82,7 @@ fun ExpenseCategoryCard(
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
                     text = "Over budget by ${formatAmount(spend.spent - category.targetGoal)}",
+                    modifier = Modifier.privacyBlur(radius = 6.dp),
                     color = barColor,
                     style = MaterialTheme.typography.labelSmall
                 )
