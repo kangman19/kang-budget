@@ -6,18 +6,28 @@ import com.example.kangbudget.data.model.BudgetType
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.Transaction
 import com.google.firebase.Timestamp
+import com.google.firebase.firestore.DocumentReference
+import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import java.time.LocalDateTime
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.atomic.AtomicLong
 
 private const val BUDGETS = "budgets"
 private const val CATEGORIES = "categories"
 private const val TRANSACTIONS = "transactions"
+
+private val LOG_DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd")
+private val LOG_TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 
 class BudgetRepository(
     private val db: FirebaseFirestore = FirebaseFirestore.getInstance()
@@ -89,6 +99,7 @@ class BudgetRepository(
     }
 
     fun observeGlobalActivityLog(): Flow<List<ActivityLogEntry>> = callbackFlow {
+        val latestSnapshotTicket = AtomicLong(0)
         val registration = db.collectionGroup(TRANSACTIONS)
             .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
@@ -97,28 +108,66 @@ class BudgetRepository(
                     return@addSnapshotListener
                 }
                 val docs = snapshot?.documents.orEmpty()
-                trySend(
-                    docs.mapNotNull { doc ->
-                        val transaction = doc.toObject(Transaction::class.java) ?: return@mapNotNull null
-                        val categoryRef = doc.reference.parent.parent ?: return@mapNotNull null
-                        val monthRef = categoryRef.parent.parent ?: return@mapNotNull null
-                        val cacheKey = "${monthRef.id}/${categoryRef.id}"
-                        ActivityLogEntry(
-                            transactionId = transaction.id,
-                            monthId = monthRef.id,
-                            categoryId = categoryRef.id,
-                            categoryName = categoryNameCache[cacheKey] ?: categoryRef.id,
-                            categoryType = categoryTypeCache[cacheKey] ?: "",
-                            amount = transaction.amount,
-                            description = transaction.description,
-                            date = transaction.date,
-                            time = transaction.time,
-                            timestamp = transaction.timestamp
-                        )
-                    }
-                )
+                val ticket = latestSnapshotTicket.incrementAndGet()
+                // Category name resolution may need async Firestore lookups, so map off the
+                // listener and only emit if no newer snapshot has arrived in the meantime.
+                launch {
+                    val entries = docs.mapNotNull { doc -> buildActivityLogEntry(doc) }
+                    if (latestSnapshotTicket.get() == ticket) trySend(entries)
+                }
             }
         awaitClose { registration.remove() }
+    }
+
+    private suspend fun buildActivityLogEntry(doc: DocumentSnapshot): ActivityLogEntry? {
+        val transaction = doc.toObject(Transaction::class.java) ?: return null
+        val categoryRef = doc.reference.parent.parent ?: return null
+        val monthRef = categoryRef.parent.parent ?: return null
+        val identity = resolveCategoryIdentity(monthRef.id, categoryRef)
+
+        // Anchor rows to the explicit user-logged date/time metadata; the recorded instant is
+        // only consulted to backfill legacy rows written before those fields existed.
+        val loggedAt = LocalDateTime.ofInstant(
+            transaction.timestamp.toDate().toInstant(),
+            ZoneId.systemDefault()
+        )
+        return ActivityLogEntry(
+            transactionId = transaction.id,
+            monthId = monthRef.id,
+            categoryId = categoryRef.id,
+            categoryName = identity.name,
+            categoryType = identity.type,
+            amount = transaction.amount,
+            description = transaction.description,
+            date = transaction.date.ifBlank { loggedAt.format(LOG_DATE_FORMAT) },
+            time = transaction.time.ifBlank { loggedAt.format(LOG_TIME_FORMAT) }
+        )
+    }
+
+    private data class CategoryIdentity(val name: String, val type: String)
+
+    /**
+     * Resolves the human-readable category name/type for an activity log row. Served from the
+     * in-memory cache when the category has already been observed; otherwise falls back to a
+     * safe lookup of the category document itself (covers months not currently subscribed).
+     */
+    private suspend fun resolveCategoryIdentity(monthId: String, categoryRef: DocumentReference): CategoryIdentity {
+        val cacheKey = "$monthId/${categoryRef.id}"
+        val cachedName = categoryNameCache[cacheKey]
+        val cachedType = categoryTypeCache[cacheKey]
+        if (cachedName != null && cachedType != null) return CategoryIdentity(cachedName, cachedType)
+
+        val category = runCatching {
+            categoryRef.get().await().toObject(Category::class.java)
+        }.getOrNull()
+
+        return if (category != null && category.name.isNotBlank()) {
+            categoryNameCache[cacheKey] = category.name
+            categoryTypeCache[cacheKey] = category.type
+            CategoryIdentity(category.name, category.type)
+        } else {
+            CategoryIdentity(cachedName ?: "Unknown category", cachedType ?: "")
+        }
     }
 
     suspend fun createBudget(budget: Budget) {

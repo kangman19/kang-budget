@@ -64,7 +64,7 @@ fun ExpenseCategoryCard(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = "${formatAmount(spend.spent)} / ${formatAmount(category.targetGoal)}",
+                        text = formatAmount(spend.spent),
                         modifier = Modifier.privacyBlur(),
                         color = barColor,
                         style = MaterialTheme.typography.bodyMedium
@@ -79,6 +79,13 @@ fun ExpenseCategoryCard(
             }
             Spacer(modifier = Modifier.height(8.dp))
             ProgressStatusBar(fraction = (spend.percentUsed / 100.0).toFloat(), color = barColor)
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = "${formatAmount(spend.spent)} / ${formatAmount(category.targetGoal)}",
+                modifier = Modifier.privacyBlur(radius = 6.dp),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                style = MaterialTheme.typography.labelSmall
+            )
             if (isOverBudget) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(

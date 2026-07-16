@@ -55,20 +55,13 @@ fun IncomeCategoryCard(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
-                    Text(
-                        text = category.name,
-                        style = MaterialTheme.typography.titleMedium,
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis
-                    )
-                    Text(
-                        text = incomeSubtitle(category),
-                        modifier = if (category.incomeType != IncomeType.OPEN) Modifier.privacyBlur(radius = 6.dp) else Modifier,
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+                Text(
+                    text = category.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f).padding(end = 8.dp)
+                )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
                         text = formatAmount(earning.earned),
@@ -103,11 +96,4 @@ fun IncomeCategoryCard(
             }
         )
     }
-}
-
-private fun incomeSubtitle(category: Category): String = when (category.incomeType) {
-    IncomeType.FIXED -> "Fixed · ${formatAmount(category.targetGoal)} monthly"
-    IncomeType.OPEN -> "Open · add as it comes"
-    IncomeType.GOAL -> "Goal · ${formatAmount(category.targetGoal)}"
-    else -> ""
 }

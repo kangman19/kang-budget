@@ -2,6 +2,7 @@ package com.example.kangbudget.ui.screens
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
@@ -25,6 +26,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.kangbudget.data.model.Budget
 import com.example.kangbudget.data.model.Category
@@ -40,7 +42,7 @@ import com.example.kangbudget.ui.util.formatAmount
 import com.example.kangbudget.ui.util.formatPercent
 import com.example.kangbudget.ui.util.privacyBlur
 import com.example.kangbudget.util.InsightsData
-import com.example.kangbudget.util.monthIdToDisplayName
+import com.example.kangbudget.util.previousMonthDisplayName
 import java.time.LocalDateTime
 
 private val EXPENSE_RED = Color(0xFFE74C3C)
@@ -66,7 +68,14 @@ fun HomeScreen(
 
     val statTiles = listOf<@Composable () -> Unit>(
         { StatTile("Left to spend", formatAmount(insights.remainingToSpend), Modifier.aspectRatio(1.3f), valueColor = EXPENSE_RED) },
-        { StatTile("Total spent", formatAmount(insights.totalExpenditure), Modifier.aspectRatio(1.3f), valueColor = EXPENSE_RED) },
+        {
+            StatTile(
+                "Total spent",
+                "KES ${formatAmount(insights.totalExpenditure)} / KES ${formatAmount(insights.totalBudgeted)}",
+                Modifier.aspectRatio(1.3f),
+                valueColor = EXPENSE_RED
+            )
+        },
         { StatTile("Total income", formatAmount(insights.totalIncome), Modifier.aspectRatio(1.3f), valueColor = INCOME_GREEN) },
         {
             StatTile(
@@ -78,7 +87,13 @@ fun HomeScreen(
         },
         { StatTile("Days left", insights.daysLeft.toString(), Modifier.aspectRatio(1.3f)) },
         { StatTile("Daily avg", formatAmount(insights.dailyAverageSpend), Modifier.aspectRatio(1.3f)) },
-        { StatTile("Top category", insights.topSpendingCategory?.category?.name ?: "—", Modifier.aspectRatio(1.3f), blurValue = false) },
+        {
+            TopCategoriesTile(
+                topIncomeName = insights.topEarningCategory?.category?.name,
+                topExpenseName = insights.topSpendingCategory?.category?.name,
+                modifier = Modifier.aspectRatio(1.3f)
+            )
+        },
         { StatTile("Saved", formatAmount(insights.remainingToSpend.coerceAtLeast(0.0)), Modifier.aspectRatio(1.3f), valueColor = INCOME_GREEN) },
         {
             StatTile(
@@ -103,7 +118,7 @@ fun HomeScreen(
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.padding(16.dp)) {
                     Text(
-                        text = "Balance from ${monthIdToDisplayName(monthId)}   KES ",
+                        text = "Balance from ${previousMonthDisplayName(monthId)}   KES ",
                         style = MaterialTheme.typography.titleMedium
                     )
                     Text(
@@ -129,7 +144,7 @@ fun HomeScreen(
         item {
             SectionHeader(
                 title = "Income",
-                total = formatAmount(insights.totalIncome),
+                total = formatAmount(insights.currentMonthIncome),
                 totalColor = INCOME_GREEN,
                 onAddCategory = { addDialogType = CategoryType.INCOME }
             )
@@ -186,6 +201,45 @@ fun HomeScreen(
                 showEditBalanceDialog = false
             }
         )
+    }
+}
+
+/**
+ * Double-sided top-categories block: income row (green) on top,
+ * expense row (red) underneath.
+ */
+@Composable
+private fun TopCategoriesTile(
+    topIncomeName: String?,
+    topExpenseName: String?,
+    modifier: Modifier = Modifier
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant,
+        modifier = modifier
+    ) {
+        Column(modifier = Modifier.padding(12.dp)) {
+            Text(
+                text = "Top categories",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Text(
+                text = topIncomeName ?: "—",
+                color = INCOME_GREEN,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = topExpenseName ?: "—",
+                color = EXPENSE_RED,
+                style = MaterialTheme.typography.bodyLarge,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
 

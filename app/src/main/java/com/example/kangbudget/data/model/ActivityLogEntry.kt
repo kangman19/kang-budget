@@ -1,7 +1,5 @@
 package com.example.kangbudget.data.model
 
-import com.google.firebase.Timestamp
-
 data class ActivityLogEntry(
     val transactionId: String,
     val monthId: String,
@@ -10,7 +8,8 @@ data class ActivityLogEntry(
     val categoryType: String,
     val amount: Double,
     val description: String,
+    /** Explicit user-logged date the transaction was recorded for (yyyy-MM-dd). */
     val date: String,
-    val time: String,
-    val timestamp: Timestamp
+    /** Explicit user-logged time the transaction was recorded for (HH:mm). */
+    val time: String
 )

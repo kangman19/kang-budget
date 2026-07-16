@@ -15,12 +15,16 @@ data class CategoryEarning(val category: Category, val earned: Double) {
 }
 
 data class InsightsData(
+    /** Previous month's carry-over compounded with this month's income — the "Total income" display node. */
     val totalIncome: Double,
+    /** Income generated within the active month only: fixed expected targets + logged open/goal transactions. */
+    val currentMonthIncome: Double,
+    /** Ending balance carried over from the previous month. */
+    val rolloverBalance: Double,
     val totalBudgeted: Double,
     val totalExpenditure: Double,
-    val incomeSpentPercent: Double,
     val remainingToSpend: Double,
-    val netCash: Double,
+    /** Predictive runway: (expected fixed income + logged open income) − total budgeted. May go negative. */
     val provisionalBalance: Double,
     val daysLeft: Int,
     val dailyAverageSpend: Double,
@@ -40,6 +44,7 @@ fun calculateInsights(
         .filter { it.type == CategoryType.EXPENSE }
         .map { category -> CategorySpend(category, transactionsByCategory[category.id].orEmpty().sumOf { it.amount }) }
 
+    // Fixed income counts at its expected monthly target; open/goal income counts from logged transactions.
     val incomeBreakdown = categories
         .filter { it.type == CategoryType.INCOME }
         .map { category ->
@@ -52,19 +57,21 @@ fun calculateInsights(
         }
 
     val totalExpenditure = expenseBreakdown.sumOf { it.spent }
-    val totalIncome = incomeBreakdown.sumOf { it.earned }
     val totalBudgeted = expenseBreakdown.sumOf { it.category.targetGoal }
-    val initialBalance = budget?.initialBalance ?: 0.0
+    val currentMonthIncome = incomeBreakdown.sumOf { it.earned }
+    val rolloverBalance = budget?.initialBalance ?: 0.0
     val elapsedDays = daysElapsed(monthId).coerceAtLeast(1)
 
     return InsightsData(
-        totalIncome = totalIncome,
+        totalIncome = rolloverBalance + currentMonthIncome,
+        currentMonthIncome = currentMonthIncome,
+        rolloverBalance = rolloverBalance,
         totalBudgeted = totalBudgeted,
         totalExpenditure = totalExpenditure,
-        incomeSpentPercent = if (totalIncome > 0) (totalExpenditure / totalIncome) * 100 else 0.0,
         remainingToSpend = totalBudgeted - totalExpenditure,
-        netCash = initialBalance + totalIncome,
-        provisionalBalance = totalIncome - totalExpenditure,
+        // Adding an expense category grows totalBudgeted and immediately shrinks the runway;
+        // logging income grows currentMonthIncome and immediately compounds it. Negatives flow through.
+        provisionalBalance = currentMonthIncome - totalBudgeted,
         daysLeft = daysRemaining(monthId),
         dailyAverageSpend = totalExpenditure / elapsedDays,
         topSpendingCategory = expenseBreakdown.filter { it.spent > 0 }.maxByOrNull { it.spent },

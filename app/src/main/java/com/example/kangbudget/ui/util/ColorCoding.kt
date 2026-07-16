@@ -1,20 +1,34 @@
 package com.example.kangbudget.ui.util
 
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.ui.graphics.Color
 import kotlin.random.Random
 
-/** Green <= 40%, Yellow 41-100%, Red > 100% of budget used. */
+// Design tokens for progress-state indication.
+val ICY_CYAN = Color(0xFF00E5FF)
+val EMERALD_GREEN = Color(0xFF00E676)
+val VIVID_YELLOW = Color(0xFFFFEA00)
+val DARK_ORANGE = Color(0xFFFF8C00)
+val CRIMSON_RED = Color(0xFFDC143C)
+
+/**
+ * 4-tier expense threshold logic:
+ * 0–39% standard layout color · 40–99% vivid yellow · exactly 100% dark orange · >100% crimson red.
+ */
+@Composable
+@ReadOnlyComposable
 fun expenseProgressColor(percentUsed: Double): Color = when {
-    percentUsed <= 40.0 -> Color(0xFF2ECC71)
-    percentUsed <= 100.0 -> Color(0xFFF1C40F)
-    else -> Color(0xFFE74C3C)
+    percentUsed < 40.0 -> MaterialTheme.colorScheme.primary
+    percentUsed < 100.0 -> VIVID_YELLOW
+    percentUsed == 100.0 -> DARK_ORANGE
+    else -> CRIMSON_RED
 }
 
-/** Frosty cyan while filling toward a goal, solid green once the goal is met or exceeded. */
-fun incomeGoalProgressColor(percentReached: Double): Color = when {
-    percentReached >= 100.0 -> Color(0xFF2ECC71)
-    else -> Color(0xFF7FDBFF)
-}
+/** Icy cyan at or above 100% of the target goal, emerald green while under 100%. */
+fun incomeGoalProgressColor(percentReached: Double): Color =
+    if (percentReached >= 100.0) ICY_CYAN else EMERALD_GREEN
 
 val OPEN_INCOME_COLOR = Color(0xFF2ECC71)
 

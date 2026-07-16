@@ -43,7 +43,7 @@ fun InsightsScreen(
         DonutSection(
             header = "Income chart",
             title = "Total earned",
-            total = insights.totalIncome,
+            total = insights.currentMonthIncome,
             slices = insights.incomeBreakdown.map { earning ->
                 DonutSlice(earning.category.name, earning.earned, incomeColors.getValue(earning.category.name))
             }
