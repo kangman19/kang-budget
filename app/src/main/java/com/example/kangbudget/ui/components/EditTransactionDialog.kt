@@ -6,10 +6,15 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Calculate
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.DatePickerDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -23,6 +28,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.example.kangbudget.data.model.Transaction
 import com.google.firebase.Timestamp
@@ -56,12 +62,13 @@ fun EditTransactionDialog(
         }
     }
 
-    var amountText by remember { mutableStateOf(transaction.amount.toString()) }
+    var amountText by remember { mutableStateOf(formatCalculatorResult(transaction.amount)) }
     var description by remember { mutableStateOf(transaction.description) }
     var selectedDate by remember { mutableStateOf(initialDateTime.toLocalDate()) }
     var selectedTime by remember { mutableStateOf(initialDateTime.toLocalTime().withSecond(0).withNano(0)) }
     var showDatePicker by remember { mutableStateOf(false) }
     var showTimePicker by remember { mutableStateOf(false) }
+    var showCalculator by remember { mutableStateOf(false) }
 
     val dateLabel = selectedDate.format(DateTimeFormatter.ofPattern("EEE, dd MMM yyyy"))
     val timeLabel = selectedTime.format(TIME_FORMAT)
@@ -71,9 +78,26 @@ fun EditTransactionDialog(
         title = { Text("Edit transaction") },
         text = {
             Column {
-                OutlinedTextField(value = amountText, onValueChange = { amountText = it }, label = { Text("Amount") })
+                OutlinedTextField(
+                    value = description,
+                    onValueChange = { description = it },
+                    label = { Text("Description") }
+                )
                 Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(value = description, onValueChange = { description = it }, label = { Text("Description") })
+                OutlinedTextField(
+                    value = amountText,
+                    // Strict numeric validation: digits and at most one decimal point.
+                    onValueChange = { input ->
+                        if (input.matches(AMOUNT_INPUT_PATTERN)) amountText = input
+                    },
+                    label = { Text("Amount") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    trailingIcon = {
+                        IconButton(onClick = { showCalculator = true }) {
+                            Icon(Icons.Filled.Calculate, contentDescription = "Open calculator")
+                        }
+                    }
+                )
                 Spacer(modifier = Modifier.height(8.dp))
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     OutlinedButton(onClick = { showDatePicker = true }, modifier = Modifier.weight(1f)) {
@@ -109,6 +133,18 @@ fun EditTransactionDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         }
     )
+
+    if (showCalculator) {
+        TransactionCalculatorDialog(
+            initialExpression = amountText,
+            onDismiss = { showCalculator = false },
+            onSave = { result ->
+                // Result lands as a plain string, so the field stays freely editable afterwards.
+                amountText = result
+                showCalculator = false
+            }
+        )
+    }
 
     if (showDatePicker) {
         val datePickerState = rememberDatePickerState(
