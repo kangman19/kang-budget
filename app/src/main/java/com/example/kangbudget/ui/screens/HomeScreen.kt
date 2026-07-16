@@ -71,7 +71,7 @@ fun HomeScreen(
         {
             StatTile(
                 "Total spent",
-                "KES ${formatAmount(insights.totalExpenditure)} / KES ${formatAmount(insights.totalBudgeted)}",
+                "${formatAmount(insights.totalExpenditure)} / ${formatAmount(insights.totalBudgeted)}",
                 Modifier.aspectRatio(1.3f),
                 valueColor = EXPENSE_RED
             )
@@ -144,7 +144,7 @@ fun HomeScreen(
         item {
             SectionHeader(
                 title = "Income",
-                total = formatAmount(insights.currentMonthIncome),
+                total = formatAmount(insights.totalIncome),
                 totalColor = INCOME_GREEN,
                 onAddCategory = { addDialogType = CategoryType.INCOME }
             )
@@ -163,7 +163,7 @@ fun HomeScreen(
             HorizontalDivider(modifier = Modifier.padding(vertical = 16.dp))
             SectionHeader(
                 title = "Expenses",
-                total = formatAmount(insights.totalExpenditure),
+                total = "${formatAmount(insights.totalExpenditure)} / ${formatAmount(insights.totalBudgeted)}",
                 totalColor = EXPENSE_RED,
                 onAddCategory = { addDialogType = CategoryType.EXPENSE }
             )

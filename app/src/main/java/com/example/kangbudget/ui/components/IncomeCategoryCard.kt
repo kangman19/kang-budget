@@ -64,7 +64,11 @@ fun IncomeCategoryCard(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = formatAmount(earning.earned),
+                        text = if (category.incomeType == IncomeType.GOAL) {
+                            "${formatAmount(earning.earned)} / ${formatAmount(category.targetGoal)}"
+                        } else {
+                            formatAmount(earning.earned)
+                        },
                         modifier = Modifier.privacyBlur(),
                         color = OPEN_INCOME_COLOR,
                         style = MaterialTheme.typography.bodyLarge

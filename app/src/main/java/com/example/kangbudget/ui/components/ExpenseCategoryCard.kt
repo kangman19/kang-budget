@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,7 +63,7 @@ fun ExpenseCategoryCard(
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        text = formatAmount(spend.spent),
+                        text = "${formatAmount(spend.spent)} / ${formatAmount(category.targetGoal)}",
                         modifier = Modifier.privacyBlur(),
                         color = barColor,
                         style = MaterialTheme.typography.bodyMedium
@@ -72,20 +71,10 @@ fun ExpenseCategoryCard(
                     IconButton(onClick = { showQuickAdd = true }) {
                         Icon(Icons.Filled.Add, contentDescription = "Add transaction")
                     }
-                    IconButton(onClick = { onClick() }) {
-                        Icon(Icons.Filled.Edit, contentDescription = "View details")
-                    }
                 }
             }
             Spacer(modifier = Modifier.height(8.dp))
             ProgressStatusBar(fraction = (spend.percentUsed / 100.0).toFloat(), color = barColor)
-            Spacer(modifier = Modifier.height(4.dp))
-            Text(
-                text = "${formatAmount(spend.spent)} / ${formatAmount(category.targetGoal)}",
-                modifier = Modifier.privacyBlur(radius = 6.dp),
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                style = MaterialTheme.typography.labelSmall
-            )
             if (isOverBudget) {
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
