@@ -24,7 +24,7 @@ data class InsightsData(
     val totalBudgeted: Double,
     val totalExpenditure: Double,
     val remainingToSpend: Double,
-    /** Predictive runway: (expected fixed income + logged open income) − total budgeted. May go negative. */
+    /** Predictive runway: previous-month balance + (expected fixed income + logged open income) − total budgeted. May go negative. */
     val provisionalBalance: Double,
     val daysLeft: Int,
     val dailyAverageSpend: Double,
@@ -43,6 +43,7 @@ fun calculateInsights(
     val expenseBreakdown = categories
         .filter { it.type == CategoryType.EXPENSE }
         .map { category -> CategorySpend(category, transactionsByCategory[category.id].orEmpty().sumOf { it.amount }) }
+        .sortedByDescending { it.spent }
 
     // Fixed income counts at its expected monthly target; open/goal income counts from logged transactions.
     val incomeBreakdown = categories
@@ -55,6 +56,7 @@ fun calculateInsights(
             }
             CategoryEarning(category, earned)
         }
+        .sortedByDescending { it.earned }
 
     val totalExpenditure = expenseBreakdown.sumOf { it.spent }
     val totalBudgeted = expenseBreakdown.sumOf { it.category.targetGoal }
@@ -70,8 +72,8 @@ fun calculateInsights(
         totalExpenditure = totalExpenditure,
         remainingToSpend = totalBudgeted - totalExpenditure,
         // Adding an expense category grows totalBudgeted and immediately shrinks the runway;
-        // logging income grows currentMonthIncome and immediately compounds it. Negatives flow through.
-        provisionalBalance = currentMonthIncome - totalBudgeted,
+        // logging income (or a bigger carry-over) immediately compounds it. Negatives flow through.
+        provisionalBalance = rolloverBalance + currentMonthIncome - totalBudgeted,
         daysLeft = daysRemaining(monthId),
         dailyAverageSpend = totalExpenditure / elapsedDays,
         topSpendingCategory = expenseBreakdown.filter { it.spent > 0 }.maxByOrNull { it.spent },
