@@ -82,7 +82,7 @@ fun MainScreen(
                     Tab(
                         selected = selectedTab == HomeTab.INSIGHTS,
                         onClick = { budgetViewModel.selectTab(HomeTab.INSIGHTS) },
-                        text = { Text("Insights") }
+                        text = { Text("Doughnuts") }
                     )
                 }
 
