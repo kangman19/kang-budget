@@ -2,6 +2,7 @@ package com.example.kangbudget.viewmodel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.example.kangbudget.data.model.ActivityLogEntry
 import com.example.kangbudget.data.model.Budget
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.data.model.Transaction
@@ -69,6 +70,12 @@ class BudgetViewModel : ViewModel() {
         calculateInsights(null, emptyList(), emptyMap(), currentMonthId())
     )
 
+    val activityLog: StateFlow<List<ActivityLogEntry>> = repository.observeGlobalActivityLog()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val allBudgets: StateFlow<List<Budget>> = repository.observeAllBudgets()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
     fun selectTab(tab: HomeTab) {
         _selectedTab.value = tab
     }
@@ -135,6 +142,12 @@ class BudgetViewModel : ViewModel() {
     fun deleteTransaction(categoryId: String, transactionId: String) {
         viewModelScope.launch {
             repository.deleteTransaction(monthId.value, categoryId, transactionId)
+        }
+    }
+
+    fun cloneMonth(sourceMonthId: String, targetMonthId: String, targetMonthName: String, newInitialBalance: Double) {
+        viewModelScope.launch {
+            repository.cloneMonth(sourceMonthId, targetMonthId, targetMonthName, newInitialBalance)
         }
     }
 }

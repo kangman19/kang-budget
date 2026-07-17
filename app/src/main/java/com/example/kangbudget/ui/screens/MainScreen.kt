@@ -4,7 +4,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -26,18 +27,17 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.kangbudget.data.model.Category
-import com.example.kangbudget.ui.components.SettingsSheet
+import com.example.kangbudget.ui.components.ActivityLogDialog
+import com.example.kangbudget.ui.components.BudgetHubDialog
 import com.example.kangbudget.ui.components.TransactionDetailSheet
 import com.example.kangbudget.ui.util.LocalAmountsHidden
 import com.example.kangbudget.viewmodel.BudgetViewModel
 import com.example.kangbudget.viewmodel.HomeTab
-import com.example.kangbudget.viewmodel.SettingsViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    budgetViewModel: BudgetViewModel = viewModel(),
-    settingsViewModel: SettingsViewModel = viewModel()
+    budgetViewModel: BudgetViewModel = viewModel()
 ) {
     val monthId by budgetViewModel.monthId.collectAsStateWithLifecycle()
     val budget by budgetViewModel.budget.collectAsStateWithLifecycle()
@@ -47,10 +47,11 @@ fun MainScreen(
     val selectedCategoryId by budgetViewModel.selectedCategoryId.collectAsStateWithLifecycle()
     val categories by budgetViewModel.categories.collectAsStateWithLifecycle()
 
-    val activityLog by settingsViewModel.activityLog.collectAsStateWithLifecycle()
-    val allBudgets by settingsViewModel.allBudgets.collectAsStateWithLifecycle()
+    val activityLog by budgetViewModel.activityLog.collectAsStateWithLifecycle()
+    val allBudgets by budgetViewModel.allBudgets.collectAsStateWithLifecycle()
 
-    var showSettings by remember { mutableStateOf(false) }
+    var showBudgetHub by remember { mutableStateOf(false) }
+    var showActivityLog by remember { mutableStateOf(false) }
     var amountsHidden by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalAmountsHidden provides amountsHidden) {
@@ -65,8 +66,11 @@ fun MainScreen(
                                 contentDescription = if (amountsHidden) "Show amounts" else "Hide amounts"
                             )
                         }
-                        IconButton(onClick = { showSettings = true }) {
-                            Icon(Icons.Filled.Settings, contentDescription = "Settings")
+                        IconButton(onClick = { showActivityLog = true }) {
+                            Icon(Icons.Filled.History, contentDescription = "Activity Log")
+                        }
+                        IconButton(onClick = { showBudgetHub = true }) {
+                            Icon(Icons.Filled.Description, contentDescription = "Budget Management")
                         }
                     }
                 )
@@ -116,15 +120,21 @@ fun MainScreen(
             )
         }
 
-        if (showSettings) {
-            SettingsSheet(
+        if (showActivityLog) {
+            ActivityLogDialog(
                 activityLog = activityLog,
+                onDismiss = { showActivityLog = false }
+            )
+        }
+
+        if (showBudgetHub) {
+            BudgetHubDialog(
                 budgets = allBudgets,
                 currentMonthId = monthId,
-                onDismiss = { showSettings = false },
+                onDismiss = { showBudgetHub = false },
                 onSelectMonth = { newMonthId -> budgetViewModel.switchMonth(newMonthId) },
                 onCloneMonth = { targetId, targetName, balance ->
-                    settingsViewModel.cloneMonth(monthId, targetId, targetName, balance)
+                    budgetViewModel.cloneMonth(monthId, targetId, targetName, balance)
                 }
             )
         }
