@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.time.LocalDateTime
@@ -27,6 +28,44 @@ import java.time.format.DateTimeFormatter
 import java.util.Date
 
 enum class HomeTab { HOME, INSIGHTS }
+
+/**
+ * A deep-link request from the Activity Log that may still be waiting on its month's
+ * Firestore snapshots to arrive. Held as intent, never as an eagerly-resolved value.
+ */
+private data class PendingTransactionEdit(
+    val monthId: String,
+    val categoryId: String,
+    val transactionId: String
+)
+
+/**
+ * Categories stamped with the month they were loaded for. The stamp is what makes the
+ * deep link safe: category ids are reused across months (cloneMonth copies them verbatim),
+ * so an unstamped lookup can match the *previous* month's data for the same category id.
+ */
+private data class MonthCategories(val monthId: String, val categories: List<Category>)
+
+/** Transactions stamped with the month they were loaded for. See [MonthCategories]. */
+private data class MonthTransactions(
+    val monthId: String,
+    val byCategory: Map<String, List<Transaction>>
+)
+
+/**
+ * Resolution state for an Activity Log deep link. [Loading] is emitted while the target
+ * month's snapshots are still in flight, so the UI never has to read a half-switched cache.
+ */
+sealed interface TransactionEditState {
+    data object Idle : TransactionEditState
+    data class Loading(val monthId: String) : TransactionEditState
+    data class Ready(
+        val monthId: String,
+        val category: Category,
+        val transaction: Transaction
+    ) : TransactionEditState
+    data class Unavailable(val monthId: String) : TransactionEditState
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
 class BudgetViewModel : ViewModel() {
@@ -42,25 +81,70 @@ class BudgetViewModel : ViewModel() {
     private val _selectedCategoryId = MutableStateFlow<String?>(null)
     val selectedCategoryId: StateFlow<String?> = _selectedCategoryId.asStateFlow()
 
+    private val _pendingTransactionEdit = MutableStateFlow<PendingTransactionEdit?>(null)
+
     val budget: StateFlow<Budget?> = _monthId
         .flatMapLatest { repository.observeBudget(it) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val categories: StateFlow<List<Category>> = _monthId
-        .flatMapLatest { repository.observeCategories(it) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+    private val scopedCategories: StateFlow<MonthCategories?> = _monthId
+        .flatMapLatest { id -> repository.observeCategories(id).map { MonthCategories(id, it) } }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
-    val transactionsByCategory: StateFlow<Map<String, List<Transaction>>> = combine(_monthId, categories) { id, cats -> id to cats }
-        .flatMapLatest { (id, cats) ->
-            if (cats.isEmpty()) {
-                flowOf(emptyMap())
-            } else {
-                combine(cats.map { category -> repository.observeTransactions(id, category.id) }) { lists ->
-                    cats.indices.associate { index -> cats[index].id to lists[index] }
+    // Derived from the stamped categories rather than combine(_monthId, categories): a plain
+    // combine emits as soon as _monthId changes, briefly pairing the NEW month id with the
+    // OLD month's category list and opening listeners on paths that belong to neither.
+    private val scopedTransactions: StateFlow<MonthTransactions?> = scopedCategories
+        .flatMapLatest { scoped ->
+            when {
+                scoped == null -> flowOf(null)
+                scoped.categories.isEmpty() -> flowOf(MonthTransactions(scoped.monthId, emptyMap()))
+                else -> combine(
+                    scoped.categories.map { category ->
+                        repository.observeTransactions(scoped.monthId, category.id)
+                    }
+                ) { lists ->
+                    MonthTransactions(
+                        scoped.monthId,
+                        scoped.categories.indices.associate { index ->
+                            scoped.categories[index].id to lists[index]
+                        }
+                    )
                 }
             }
         }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
+
+    val categories: StateFlow<List<Category>> = scopedCategories
+        .map { it?.categories.orEmpty() }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val transactionsByCategory: StateFlow<Map<String, List<Transaction>>> = scopedTransactions
+        .map { it?.byCategory.orEmpty() }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyMap())
+
+    /**
+     * Resolves a pending Activity Log deep link reactively. Rather than reading the cache
+     * immediately after switching months — which returns the outgoing month's data — this
+     * waits until both streams report the *requested* month, then looks the transaction up.
+     * A definitive [TransactionEditState.Unavailable] is only possible once that data has
+     * landed, so no timeout or arbitrary delay is involved.
+     */
+    val transactionEditState: StateFlow<TransactionEditState> =
+        combine(_pendingTransactionEdit, scopedCategories, scopedTransactions) { pending, cats, txs ->
+            if (pending == null) return@combine TransactionEditState.Idle
+            if (cats?.monthId != pending.monthId || txs?.monthId != pending.monthId) {
+                return@combine TransactionEditState.Loading(pending.monthId)
+            }
+            val category = cats.categories.find { it.id == pending.categoryId }
+            val transaction = txs.byCategory[pending.categoryId]
+                ?.find { it.id == pending.transactionId }
+            if (category != null && transaction != null) {
+                TransactionEditState.Ready(pending.monthId, category, transaction)
+            } else {
+                TransactionEditState.Unavailable(pending.monthId)
+            }
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), TransactionEditState.Idle)
 
     val insights: StateFlow<InsightsData> = combine(budget, categories, transactionsByCategory, _monthId) { b, cats, txMap, id ->
         calculateInsights(b, cats, txMap, id)
@@ -82,6 +166,24 @@ class BudgetViewModel : ViewModel() {
 
     fun switchMonth(newMonthId: String) {
         _monthId.value = newMonthId
+    }
+
+    /**
+     * Deep link from the Activity Log: switches the dashboard to [monthId] and opens the
+     * edit panel for the given transaction once that month's data has actually loaded.
+     *
+     * The intent is recorded *before* the month switch so a fast snapshot can never land in
+     * the gap between the two. If [monthId] is already the active month the streams are
+     * already stamped with it and resolution completes on the next emission.
+     */
+    fun navigateToAndEditTransaction(monthId: String, categoryId: String, transactionId: String) {
+        _selectedCategoryId.value = null
+        _pendingTransactionEdit.value = PendingTransactionEdit(monthId, categoryId, transactionId)
+        _monthId.value = monthId
+    }
+
+    fun dismissTransactionEdit() {
+        _pendingTransactionEdit.value = null
     }
 
     fun openCategoryDetail(categoryId: String) {
@@ -134,8 +236,17 @@ class BudgetViewModel : ViewModel() {
     }
 
     fun updateTransaction(categoryId: String, transaction: Transaction) {
+        updateTransactionIn(monthId.value, categoryId, transaction)
+    }
+
+    /**
+     * Writes against an explicit month instead of the currently-selected one. The deep-link
+     * editor uses this so the save still targets the originating month even if the user
+     * switches months while the panel is open.
+     */
+    fun updateTransactionIn(monthId: String, categoryId: String, transaction: Transaction) {
         viewModelScope.launch {
-            repository.updateTransaction(monthId.value, categoryId, transaction)
+            repository.updateTransaction(monthId, categoryId, transaction)
         }
     }
 

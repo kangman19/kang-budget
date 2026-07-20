@@ -1,13 +1,17 @@
 package com.example.kangbudget.ui.screens
 
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -16,6 +20,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -23,16 +28,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.ui.components.ActivityLogDialog
 import com.example.kangbudget.ui.components.BudgetHubDialog
+import com.example.kangbudget.ui.components.EditTransactionDialog
 import com.example.kangbudget.ui.components.TransactionDetailSheet
 import com.example.kangbudget.ui.util.LocalAmountsHidden
 import com.example.kangbudget.viewmodel.BudgetViewModel
+import com.example.kangbudget.util.monthIdToDisplayName
 import com.example.kangbudget.viewmodel.HomeTab
+import com.example.kangbudget.viewmodel.TransactionEditState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,6 +59,7 @@ fun MainScreen(
 
     val activityLog by budgetViewModel.activityLog.collectAsStateWithLifecycle()
     val allBudgets by budgetViewModel.allBudgets.collectAsStateWithLifecycle()
+    val transactionEditState by budgetViewModel.transactionEditState.collectAsStateWithLifecycle()
 
     var showBudgetHub by remember { mutableStateOf(false) }
     var showActivityLog by remember { mutableStateOf(false) }
@@ -123,7 +134,70 @@ fun MainScreen(
         if (showActivityLog) {
             ActivityLogDialog(
                 activityLog = activityLog,
-                onDismiss = { showActivityLog = false }
+                onDismiss = { showActivityLog = false },
+                onEntryClick = { entry ->
+                    // Close the log immediately; the edit panel takes over as soon as the
+                    // requested month's snapshots resolve.
+                    showActivityLog = false
+                    budgetViewModel.navigateToAndEditTransaction(
+                        monthId = entry.monthId,
+                        categoryId = entry.categoryId,
+                        transactionId = entry.transactionId
+                    )
+                }
+            )
+        }
+
+        when (val editState = transactionEditState) {
+            is TransactionEditState.Idle -> Unit
+
+            is TransactionEditState.Loading -> AlertDialog(
+                onDismissRequest = { budgetViewModel.dismissTransactionEdit() },
+                title = { Text("Loading transaction") },
+                text = {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                        Text(
+                            text = "Opening ${monthIdToDisplayName(editState.monthId)}…",
+                            modifier = Modifier.padding(start = 12.dp)
+                        )
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = { budgetViewModel.dismissTransactionEdit() }) {
+                        Text("Cancel")
+                    }
+                }
+            )
+
+            is TransactionEditState.Ready -> EditTransactionDialog(
+                transaction = editState.transaction,
+                onDismiss = { budgetViewModel.dismissTransactionEdit() },
+                onConfirm = { updated ->
+                    // Writes against the originating month explicitly, not the selected one.
+                    budgetViewModel.updateTransactionIn(
+                        monthId = editState.monthId,
+                        categoryId = editState.category.id,
+                        transaction = updated
+                    )
+                    budgetViewModel.dismissTransactionEdit()
+                }
+            )
+
+            is TransactionEditState.Unavailable -> AlertDialog(
+                onDismissRequest = { budgetViewModel.dismissTransactionEdit() },
+                title = { Text("Transaction unavailable") },
+                text = {
+                    Text(
+                        "This transaction is no longer in " +
+                            "${monthIdToDisplayName(editState.monthId)}. It may have been deleted."
+                    )
+                },
+                confirmButton = {
+                    TextButton(onClick = { budgetViewModel.dismissTransactionEdit() }) {
+                        Text("OK")
+                    }
+                }
             )
         }
 

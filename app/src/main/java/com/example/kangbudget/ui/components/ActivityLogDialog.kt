@@ -1,5 +1,6 @@
 package com.example.kangbudget.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -32,7 +33,8 @@ private val EXPENSE_RED = Color(0xFFE74C3C)
 @Composable
 fun ActivityLogDialog(
     activityLog: List<ActivityLogEntry>,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    onEntryClick: (ActivityLogEntry) -> Unit
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -60,7 +62,7 @@ fun ActivityLogDialog(
                 } else {
                     LazyColumn {
                         items(activityLog, key = { it.transactionId }) { entry ->
-                            ActivityLogRow(entry)
+                            ActivityLogRow(entry = entry, onClick = { onEntryClick(entry) })
                         }
                     }
                 }
@@ -71,11 +73,12 @@ fun ActivityLogDialog(
 }
 
 @Composable
-private fun ActivityLogRow(entry: ActivityLogEntry) {
+private fun ActivityLogRow(entry: ActivityLogEntry, onClick: () -> Unit) {
     val color = if (entry.categoryType == CategoryType.INCOME) INCOME_GREEN else EXPENSE_RED
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .clickable(onClick = onClick)
             .padding(vertical = 6.dp),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
