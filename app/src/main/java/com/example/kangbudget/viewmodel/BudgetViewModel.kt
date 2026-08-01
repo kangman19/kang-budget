@@ -168,6 +168,11 @@ class BudgetViewModel : ViewModel() {
         _monthId.value = newMonthId
     }
 
+    /** Snaps the dashboard back from historical time-travel to the live system month. */
+    fun resetToCurrentMonth() {
+        _monthId.value = currentMonthId()
+    }
+
     /**
      * Deep link from the Activity Log: switches the dashboard to [monthId] and opens the
      * edit panel for the given transaction once that month's data has actually loaded.

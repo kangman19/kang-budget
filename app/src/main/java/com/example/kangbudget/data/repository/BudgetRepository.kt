@@ -17,8 +17,10 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import com.example.kangbudget.util.monthIdToDisplayName
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -65,7 +67,7 @@ class BudgetRepository(
         awaitClose { registration.remove() }
     }
 
-    fun observeAllBudgets(): Flow<List<Budget>> = callbackFlow {
+    private fun observeExplicitBudgets(): Flow<List<Budget>> = callbackFlow {
         val registration = db.collection(BUDGETS)
             .orderBy("createdAt", Query.Direction.ASCENDING)
             .addSnapshotListener { snapshot, error ->
@@ -76,6 +78,26 @@ class BudgetRepository(
                 trySend(snapshot?.toObjects(Budget::class.java).orEmpty())
             }
         awaitClose { registration.remove() }
+    }
+
+    /**
+     * Historical months only get an explicit `budgets/{monthId}` doc when the user clones
+     * into them. A month that was simply lived in as the active month (then superseded by
+     * the next one at rollover) has no such doc, so its categories/transactions would
+     * otherwise be invisible to the Budget Management list. This synthesizes a placeholder
+     * [Budget] for any monthId seen in the transaction logs but missing an explicit doc —
+     * the real category/transaction data for that month is still queried by monthId directly
+     * and is unaffected by whether the parent budget doc exists.
+     */
+    fun observeAllBudgets(): Flow<List<Budget>> = combine(
+        observeExplicitBudgets(),
+        observeGlobalActivityLog()
+    ) { explicit, activityLog ->
+        val explicitIds = explicit.map { it.id }.toSet()
+        val synthesized = activityLog.map { it.monthId }.toSet()
+            .minus(explicitIds)
+            .map { monthId -> Budget(id = monthId, name = monthIdToDisplayName(monthId)) }
+        (explicit + synthesized).sortedBy { it.id }
     }
 
     fun observeCategories(monthId: String): Flow<List<Category>> = callbackFlow {

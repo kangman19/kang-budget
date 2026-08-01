@@ -41,6 +41,7 @@ object ExcelWebhookApi {
     @Volatile private var enabled: Boolean = false
 
     private const val TIMEOUT_MS = 10_000
+    private const val MAX_REDIRECTS = 5
 
     /** Wire in the endpoint loaded from Firestore `config/webhooks`. */
     fun configure(url: String, secret: String, enabled: Boolean) {
@@ -80,27 +81,48 @@ object ExcelWebhookApi {
 
     private suspend fun post(body: JSONObject): Boolean = withContext(Dispatchers.IO) {
         if (!isEnabled()) return@withContext false
-        var connection: HttpURLConnection? = null
-        try {
-            connection = (URL(url).openConnection() as HttpURLConnection).apply {
-                requestMethod = "POST"
-                // Apps Script 302s to script.googleusercontent.com; the write has already been
-                // processed by /exec, so following the redirect just fetches the JSON result.
-                instanceFollowRedirects = true
+        runCatching { postFollowingRedirects(url, body.toString()) }.getOrDefault(false)
+    }
+
+    /**
+     * POSTs the payload, then manually follows Apps Script's 302 to script.googleusercontent.com.
+     *
+     * HttpURLConnection's automatic redirect handling does NOT reliably follow a redirect after
+     * a POST body — it hands back the raw 302, which we'd misread as a failure and leave the op
+     * on the outbox forever. So we follow it ourselves: the first hop is the POST (which runs
+     * doPost server-side), and each redirect is fetched with GET until we reach the JSON result.
+     */
+    private fun postFollowingRedirects(initialUrl: String, payload: String): Boolean {
+        var targetUrl = initialUrl
+        var method = "POST"
+        var hops = 0
+        while (true) {
+            val connection = (URL(targetUrl).openConnection() as HttpURLConnection).apply {
+                requestMethod = method
+                instanceFollowRedirects = false
                 connectTimeout = TIMEOUT_MS
                 readTimeout = TIMEOUT_MS
-                doOutput = true
-                setRequestProperty("Content-Type", "application/json")
             }
-            connection.outputStream.use { it.write(body.toString().toByteArray(Charsets.UTF_8)) }
-            val code = connection.responseCode
-            // Drain the body so the connection can be reused/closed cleanly.
-            runCatching { connection.inputStream.use { it.readBytes() } }
-            code in 200..299
-        } catch (e: Exception) {
-            false
-        } finally {
-            connection?.disconnect()
+            try {
+                if (method == "POST") {
+                    connection.doOutput = true
+                    connection.setRequestProperty("Content-Type", "application/json")
+                    connection.outputStream.use { it.write(payload.toByteArray(Charsets.UTF_8)) }
+                }
+                val code = connection.responseCode
+                if (code in 300..399 && hops < MAX_REDIRECTS) {
+                    val location = connection.getHeaderField("Location") ?: return false
+                    targetUrl = location
+                    method = "GET" // the write already happened on the initial POST; just fetch the result
+                    hops++
+                    continue
+                }
+                // Drain so the socket can be released cleanly.
+                runCatching { connection.inputStream.use { it.readBytes() } }
+                return code in 200..299
+            } finally {
+                connection.disconnect()
+            }
         }
     }
 }

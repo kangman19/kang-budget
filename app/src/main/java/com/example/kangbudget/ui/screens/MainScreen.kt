@@ -1,10 +1,23 @@
 package com.example.kangbudget.ui.screens
 
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.History
@@ -17,6 +30,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Tab
 import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
@@ -30,6 +44,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -40,9 +56,12 @@ import com.example.kangbudget.ui.components.EditTransactionDialog
 import com.example.kangbudget.ui.components.TransactionDetailSheet
 import com.example.kangbudget.ui.util.LocalAmountsHidden
 import com.example.kangbudget.viewmodel.BudgetViewModel
+import com.example.kangbudget.util.currentMonthId
 import com.example.kangbudget.util.monthIdToDisplayName
 import com.example.kangbudget.viewmodel.HomeTab
 import com.example.kangbudget.viewmodel.TransactionEditState
+
+private val HISTORICAL_BLUE = Color(0xFF2196F3)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,7 +88,17 @@ fun MainScreen(
         Scaffold(
             topBar = {
                 TopAppBar(
-                    title = { Text("KangBudget") },
+                    title = {
+                        if (monthId == currentMonthId()) {
+                            Text("KangBudget")
+                        } else {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(monthIdToDisplayName(monthId))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                HistoricalViewBadge(onClick = { budgetViewModel.resetToCurrentMonth() })
+                            }
+                        }
+                    },
                     actions = {
                         IconButton(onClick = { amountsHidden = !amountsHidden }) {
                             Icon(
@@ -210,6 +239,47 @@ fun MainScreen(
                 onCloneMonth = { targetId, targetName, balance ->
                     budgetViewModel.cloneMonth(monthId, targetId, targetName, balance)
                 }
+            )
+        }
+    }
+}
+
+/**
+ * Pulsing blue "HISTORICAL VIEW" tag shown in the top bar while [monthId] differs from the
+ * live system month. Tapping it snaps the dashboard back to the current month.
+ */
+@Composable
+private fun HistoricalViewBadge(onClick: () -> Unit) {
+    val infiniteTransition = rememberInfiniteTransition(label = "historicalPulse")
+    val pulseAlpha by infiniteTransition.animateFloat(
+        initialValue = 0.35f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 900, easing = LinearEasing),
+            repeatMode = RepeatMode.Reverse
+        ),
+        label = "pulseAlpha"
+    )
+    Surface(
+        shape = RoundedCornerShape(50),
+        color = HISTORICAL_BLUE.copy(alpha = 0.15f),
+        modifier = Modifier.clickable(onClick = onClick)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp)
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(8.dp)
+                    .clip(CircleShape)
+                    .background(HISTORICAL_BLUE.copy(alpha = pulseAlpha))
+            )
+            Spacer(modifier = Modifier.width(6.dp))
+            Text(
+                "HISTORICAL VIEW",
+                style = MaterialTheme.typography.labelSmall,
+                color = HISTORICAL_BLUE
             )
         }
     }
