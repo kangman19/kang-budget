@@ -36,6 +36,7 @@ androidx-navigation-compose = { group = "androidx.navigation", name = "navigatio
 firebase-bom = { group = "com.google.firebase", name = "firebase-bom", version.ref = "firebaseBom" }
 firebase-firestore = { group = "com.google.firebase", name = "firebase-firestore" }
 firebase-analytics = { group = "com.google.firebase", name = "firebase-analytics" }
+firebase-auth = { group = "com.google.firebase", name = "firebase-auth" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "kotlinxCoroutinesPlayServices" }
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }
 

@@ -55,6 +55,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.firebase.firestore)
+    implementation(libs.firebase.auth)
     implementation(libs.kotlinx.coroutines.play.services)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
