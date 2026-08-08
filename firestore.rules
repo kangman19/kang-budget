@@ -19,6 +19,14 @@ service cloud.firestore {
       }
     }
 
+    // Collection-group read for BudgetRepository.observeGlobalActivityLog(), which powers
+    // both the activity feed and the previous-month synthesis in observeAllBudgets(). Nested
+    // match rules above only cover exact-path access; collectionGroup() queries require this
+    // separate wildcard rule or Firestore denies the query outright.
+    match /{path=**}/transactions/{transactionId} {
+      allow read: if request.auth != null;
+    }
+
     // Holds the Sheets webhook URL + shared secret. The app reads it at startup but never
     // writes it — update it from the Firebase Console (Firestore Data tab) or Admin SDK only.
     match /config/{docId} {

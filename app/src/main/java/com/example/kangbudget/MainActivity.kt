@@ -1,6 +1,7 @@
 package com.example.kangbudget
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -11,6 +12,8 @@ import com.example.kangbudget.ui.theme.KangBudgetTheme
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+
+private const val TAG = "MainActivity"
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -25,6 +28,7 @@ class MainActivity : ComponentActivity() {
             val auth = FirebaseAuth.getInstance()
             if (auth.currentUser == null) {
                 runCatching { auth.signInAnonymously().await() }
+                    .onFailure { Log.w(TAG, "Anonymous sign-in failed; Firestore reads/writes will be denied", it) }
             }
             // Load the Sheets webhook endpoint and replay any queued offline ops. Reads from
             // Firestore's local cache, so this succeeds even on a cold, offline launch.

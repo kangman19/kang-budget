@@ -11,12 +11,14 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -26,6 +28,8 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.atomic.AtomicLong
+
+private const val TAG = "BudgetRepository"
 
 private const val BUDGETS = "budgets"
 private const val CATEGORIES = "categories"
@@ -65,6 +69,9 @@ class BudgetRepository(
             trySend(snapshot?.toObject(Budget::class.java))
         }
         awaitClose { registration.remove() }
+    }.catch { e ->
+        Log.w(TAG, "observeBudget($monthId) failed", e)
+        emit(null)
     }
 
     private fun observeExplicitBudgets(): Flow<List<Budget>> = callbackFlow {
@@ -78,6 +85,9 @@ class BudgetRepository(
                 trySend(snapshot?.toObjects(Budget::class.java).orEmpty())
             }
         awaitClose { registration.remove() }
+    }.catch { e ->
+        Log.w(TAG, "observeExplicitBudgets failed", e)
+        emit(emptyList())
     }
 
     /**
@@ -119,6 +129,9 @@ class BudgetRepository(
                 trySend(categories)
             }
         awaitClose { registration.remove() }
+    }.catch { e ->
+        Log.w(TAG, "observeCategories($monthId) failed", e)
+        emit(emptyList())
     }
 
     fun observeTransactions(monthId: String, categoryId: String): Flow<List<Transaction>> = callbackFlow {
@@ -132,6 +145,9 @@ class BudgetRepository(
                 trySend(snapshot?.toObjects(Transaction::class.java).orEmpty())
             }
         awaitClose { registration.remove() }
+    }.catch { e ->
+        Log.w(TAG, "observeTransactions($monthId, $categoryId) failed", e)
+        emit(emptyList())
     }
 
     fun observeGlobalActivityLog(): Flow<List<ActivityLogEntry>> = callbackFlow {
@@ -153,6 +169,9 @@ class BudgetRepository(
                 }
             }
         awaitClose { registration.remove() }
+    }.catch { e ->
+        Log.w(TAG, "observeGlobalActivityLog failed", e)
+        emit(emptyList())
     }
 
     private suspend fun buildActivityLogEntry(doc: DocumentSnapshot): ActivityLogEntry? {
