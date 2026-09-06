@@ -11,6 +11,7 @@ import com.google.firebase.firestore.DocumentSnapshot
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.google.firebase.firestore.SetOptions
+import com.google.firebase.firestore.Source
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -357,8 +358,10 @@ class BudgetRepository(
      */
     suspend fun loadWebhookConfig() {
         val doc = runCatching {
-            db.collection(CONFIG).document(WEBHOOKS_DOC).get().await()
-        }.getOrNull()
+            db.collection(CONFIG).document(WEBHOOKS_DOC).get(Source.CACHE).await()
+        }.getOrElse {
+            runCatching { db.collection(CONFIG).document(WEBHOOKS_DOC).get(Source.SERVER).await() }.getOrNull()
+        }
         if (doc != null && doc.exists()) {
             ExcelWebhookApi.configure(
                 url = doc.getString("url").orEmpty(),

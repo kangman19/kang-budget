@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -66,7 +67,8 @@ private val HISTORICAL_BLUE = Color(0xFF2196F3)
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainScreen(
-    budgetViewModel: BudgetViewModel = viewModel()
+    budgetViewModel: BudgetViewModel = viewModel(),
+    offlineNotice: Boolean = false
 ) {
     val monthId by budgetViewModel.monthId.collectAsStateWithLifecycle()
     val budget by budgetViewModel.budget.collectAsStateWithLifecycle()
@@ -83,6 +85,7 @@ fun MainScreen(
     var showBudgetHub by remember { mutableStateOf(false) }
     var showActivityLog by remember { mutableStateOf(false) }
     var amountsHidden by remember { mutableStateOf(false) }
+    var offlineBannerDismissed by remember { mutableStateOf(false) }
 
     CompositionLocalProvider(LocalAmountsHidden provides amountsHidden) {
         Scaffold(
@@ -117,6 +120,9 @@ fun MainScreen(
             }
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
+                if (offlineNotice && !offlineBannerDismissed) {
+                    OfflineBanner(onDismiss = { offlineBannerDismissed = true })
+                }
                 TabRow(selectedTabIndex = if (selectedTab == HomeTab.HOME) 0 else 1) {
                     Tab(
                         selected = selectedTab == HomeTab.HOME,
@@ -240,6 +246,28 @@ fun MainScreen(
                     budgetViewModel.cloneMonth(monthId, targetId, targetName, balance)
                 }
             )
+        }
+    }
+}
+
+@Composable
+private fun OfflineBanner(onDismiss: () -> Unit) {
+    Surface(color = MaterialTheme.colorScheme.errorContainer) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                text = "You're offline — showing saved data. Sync features are paused until you reconnect.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+                modifier = Modifier.weight(1f)
+            )
+            TextButton(onClick = onDismiss) {
+                Text("Dismiss")
+            }
         }
     }
 }
