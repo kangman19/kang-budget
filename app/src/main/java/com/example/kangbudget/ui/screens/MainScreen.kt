@@ -43,13 +43,16 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.example.kangbudget.data.PrivacyPreferences
 import com.example.kangbudget.data.model.Category
 import com.example.kangbudget.ui.components.ActivityLogDialog
 import com.example.kangbudget.ui.components.BudgetHubDialog
@@ -61,6 +64,7 @@ import com.example.kangbudget.util.currentMonthId
 import com.example.kangbudget.util.monthIdToDisplayName
 import com.example.kangbudget.viewmodel.HomeTab
 import com.example.kangbudget.viewmodel.TransactionEditState
+import kotlinx.coroutines.launch
 
 private val HISTORICAL_BLUE = Color(0xFF2196F3)
 
@@ -84,8 +88,12 @@ fun MainScreen(
 
     var showBudgetHub by remember { mutableStateOf(false) }
     var showActivityLog by remember { mutableStateOf(false) }
-    var amountsHidden by remember { mutableStateOf(false) }
     var offlineBannerDismissed by remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+    val privacyPreferences = remember { PrivacyPreferences(context.applicationContext) }
+    val amountsHidden by privacyPreferences.amountsHidden.collectAsStateWithLifecycle(initialValue = false)
 
     CompositionLocalProvider(LocalAmountsHidden provides amountsHidden) {
         Scaffold(
@@ -103,7 +111,9 @@ fun MainScreen(
                         }
                     },
                     actions = {
-                        IconButton(onClick = { amountsHidden = !amountsHidden }) {
+                        IconButton(onClick = {
+                            coroutineScope.launch { privacyPreferences.setAmountsHidden(!amountsHidden) }
+                        }) {
                             Icon(
                                 if (amountsHidden) Icons.Filled.VisibilityOff else Icons.Filled.Visibility,
                                 contentDescription = if (amountsHidden) "Show amounts" else "Hide amounts"
