@@ -82,8 +82,6 @@ fun MainScreen(
     val selectedCategoryId by budgetViewModel.selectedCategoryId.collectAsStateWithLifecycle()
     val categories by budgetViewModel.categories.collectAsStateWithLifecycle()
 
-    val activityLog by budgetViewModel.activityLog.collectAsStateWithLifecycle()
-    val allBudgets by budgetViewModel.allBudgets.collectAsStateWithLifecycle()
     val transactionEditState by budgetViewModel.transactionEditState.collectAsStateWithLifecycle()
 
     var showBudgetHub by remember { mutableStateOf(false) }
@@ -177,6 +175,7 @@ fun MainScreen(
         }
 
         if (showActivityLog) {
+            val activityLog by budgetViewModel.activityLog.collectAsStateWithLifecycle()
             ActivityLogDialog(
                 activityLog = activityLog,
                 onDismiss = { showActivityLog = false },
@@ -247,6 +246,7 @@ fun MainScreen(
         }
 
         if (showBudgetHub) {
+            val allBudgets by budgetViewModel.allBudgets.collectAsStateWithLifecycle()
             BudgetHubDialog(
                 budgets = allBudgets,
                 currentMonthId = monthId,

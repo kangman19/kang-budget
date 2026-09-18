@@ -157,7 +157,10 @@ class BudgetViewModel : ViewModel() {
     val activityLog: StateFlow<List<ActivityLogEntry>> = repository.observeGlobalActivityLog()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
-    val allBudgets: StateFlow<List<Budget>> = repository.observeAllBudgets()
+    // Shares the [activityLog] flow above rather than letting observeAllBudgets open its own
+    // collection-group listener: that listener replays the whole transaction history through
+    // per-document category resolution, so a second independent subscription doubled that cost.
+    val allBudgets: StateFlow<List<Budget>> = repository.observeAllBudgets(activityLog)
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun selectTab(tab: HomeTab) {
