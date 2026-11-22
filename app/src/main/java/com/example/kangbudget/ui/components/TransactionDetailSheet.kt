@@ -85,7 +85,7 @@ private fun TransactionRow(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Column {
+        Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
             Text(text = transaction.description.ifBlank { "No description" }, style = MaterialTheme.typography.bodyMedium)
             Text(
                 text = "${transaction.date} · ${transaction.time}",
@@ -97,7 +97,9 @@ private fun TransactionRow(
             Text(
                 text = formatAmount(transaction.amount),
                 modifier = Modifier.privacyBlur(),
-                style = MaterialTheme.typography.bodyMedium
+                style = MaterialTheme.typography.bodyMedium,
+                maxLines = 1,
+                softWrap = false
             )
             IconButton(onClick = onEdit) { Icon(Icons.Filled.Edit, contentDescription = "Edit transaction") }
             IconButton(onClick = onDelete) { Icon(Icons.Filled.Delete, contentDescription = "Delete transaction") }
